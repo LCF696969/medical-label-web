@@ -416,9 +416,9 @@
 <body>
 
 <div class="header">
-    <span class="header-badge">V3.0</span>
+    <span class="header-badge">V4.0</span>
     <h1>透析阻塞預警標記系統</h1>
-    <p>Asia University CN_Lab &nbsp;·&nbsp; 預警窗口：<span class="header-window" id="headerWindowSize">30</span> 分鐘</p>
+    <p>Asia University CN_Lab &nbsp;·&nbsp; Session 級標記模式</p>
 </div>
 
 <div class="layout">
@@ -468,37 +468,30 @@
         </div>
 
         <div class="panel" id="labelPanel" style="display:none">
-            <div class="panel-title">步驟 3　透析級標記</div>
+            <div class="panel-title">步驟 3　Session 標記</div>
             <div class="occ-form">
                 <div>
-                    <div class="occ-question">此次透析是否發生阻塞？</div>
+                    <div class="occ-question">⚡ 下一次透析是否會阻塞？</div>
+                    <div style="font-size:0.78em; color:var(--text2); margin-bottom:10px; line-height:1.5;">
+                        根據此次 VP 曲線趨勢判斷<br>
+                        標記結果會寫入統一總表
+                    </div>
                     <div class="toggle-row">
-                        <div class="toggle-btn" id="btnYes" onclick="setOccurrence(true)">🚨 是，有阻塞</div>
-                        <div class="toggle-btn" id="btnNo"  onclick="setOccurrence(false)">✅ 否，正常</div>
+                        <div class="toggle-btn" id="btnYes" onclick="setOccurrence(true)">🚨 下次會阻塞</div>
+                        <div class="toggle-btn" id="btnNo"  onclick="setOccurrence(false)">✅ 下次正常</div>
                     </div>
                 </div>
 
-                <div id="minuteSection" style="display:none">
-                    <div class="minute-input-wrap">
-                        <label>自訂預警窗口長度（分鐘）</label>
-                        <input type="number" id="warnWindowInput" value="30" min="1" oninput="updateWindowSize()">
-                    </div>
-
-                    <div class="minute-input-wrap">
-                        <label>阻塞發生的分鐘數 <span style="color:var(--accent); font-weight:bold;">（可直接點擊圖表）</span></label>
-                        <input type="number" id="occMinute" placeholder="例：187" min="0" oninput="updatePreview()">
-                        <div class="hint">請輸入，或直接點擊右側圖表上發生異常的資料點</div>
-                    </div>
-
-                    <div class="warning-preview" id="warningPreview" style="display:none; margin-top:10px;">
-                        <div class="wlabel">⚡ 預警窗口預覽</div>
+                <div id="sessionPreview" style="display:none; margin-top:8px;">
+                    <div class="warning-preview" id="warningPreview">
+                        <div class="wlabel" id="previewLabel">—</div>
                         <div id="previewText" style="margin-top:6px; color:var(--text2);"></div>
                     </div>
                 </div>
 
                 <div style="display: flex; gap: 8px; margin-top: 6px;">
                     <button class="btn btn-danger" id="applyBtn" onclick="applyLabel()" disabled style="flex: 2;">套用並加入清單</button>
-                    <button class="btn btn-outline" onclick="resetChartLabels()" style="flex: 1; padding: 10px 8px; font-size: 0.85em;" title="清除這張圖表的所有標記與選擇">🧹 重新標記</button>
+                    <button class="btn btn-outline" onclick="resetChartLabels()" style="flex: 1; padding: 10px 8px; font-size: 0.85em;" title="清除此 Session 的標記">🧹 重設</button>
                 </div>
             </div>
         </div>
@@ -507,6 +500,9 @@
             <div class="panel-title">已標記清單</div>
             <div id="sessionsList"></div>
             <div class="status-bar" id="statusBar"></div>
+            <button class="btn btn-success" style="margin-top:12px;" onclick="downloadMasterCSV()" id="exportMasterBtn" disabled>
+                📋 匯出標記總表 CSV
+            </button>
         </div>
 
     </div>
@@ -514,21 +510,20 @@
     <div class="main">
 
         <div class="instructions">
-            <h3>📋 醫生標記說明（V3.0 透析級標記）</h3>
+            <h3>📋 醫生標記說明（V4.0 Session 級標記）</h3>
             <ul class="step-list">
-                <li><span class="num">1</span><span>上傳患者的 <code style="color:var(--accent)">_processed.csv</code>（每分鐘一筆，含 VP 和 TMP）</span></li>
-                <li><span class="num">2</span><span>選擇 X 軸（時間序列）並生成圖表</span></li>
-                <li><span class="num">3</span><span>觀察圖形，判斷此次透析是否有阻塞發生</span></li>
-                <li><span class="num">4</span><span>若有阻塞：輸入（或點擊圖表選擇）阻塞分鐘數，系統會自動將前 <strong style="color:var(--red)">設定窗口數</strong> 的時間標為 1（預警窗口）</span></li>
-                <li><span class="num">5</span><span>若無阻塞：整場透析 label 全部為 0</span></li>
-                <li><span class="num">6</span><span>套用後下載 CSV，放入「標記後放置區」資料夾</span></li>
+                <li><span class="num">1</span><span>上傳患者的 <code style="color:var(--accent)">_Vpressure.csv</code>（每分鐘一筆，含 VP 時序）</span></li>
+                <li><span class="num">2</span><span>選擇 X 軸（時間序列）並生成圖表，觀察整條 VP 曲線趨勢</span></li>
+                <li><span class="num">3</span><span>判斷：<strong style="color:var(--red)">下一次透析</strong>是否會發生阻塞？（根據此次曲線趨勢判斷）</span></li>
+                <li><span class="num">4</span><span>點擊「下一次會阻塞」或「下一次正常」，套用後自動加入右側清單</span></li>
+                <li><span class="num">5</span><span>標記完所有 Session 後，點擊「<strong style="color:var(--green)">匯出標記總表</strong>」下載統一 CSV</span></li>
             </ul>
         </div>
 
         <div class="legend">
-            <div class="legend-item"><div class="legend-dot" style="background:#3fb950"></div>Label = 0 &nbsp;正常 / 預警窗口外</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#f85149"></div>Label = 1 &nbsp;預警窗口區間</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#db6d28"></div>阻塞發生點</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#3fb950"></div>此 Session → 下次正常（label = 0）</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#f85149"></div>此 Session → 下次阻塞（label = 1）</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#8b949e"></div>尚未標記</div>
         </div>
 
         <div class="chart-container" id="chartContainer" style="display:none">
@@ -549,11 +544,10 @@
         </div>
 
         <div class="dl-area" id="dlArea" style="display:none">
-            <h3>📥 匯出標記結果</h3>
-            <p>下載後請放入「標記後放置區」資料夾，供特徵工程腳本讀取。</p>
+            <h3>✅ 標記已套用</h3>
+            <p>此 Session 已加入清單。繼續上傳下一個 Session，或從左側匯出標記總表。</p>
             <div class="dl-buttons">
-                <button class="btn btn-success" onclick="downloadCSV()">📊 下載標記 CSV</button>
-                <button class="btn btn-outline"  onclick="downloadImage()">📷 下載圖表 PNG</button>
+                <button class="btn btn-outline" onclick="downloadImage()">📷 下載圖表 PNG</button>
             </div>
         </div>
 
@@ -569,10 +563,9 @@ let headers       = [];
 let chart         = null;
 let xCol          = '';
 let displayMode   = 'vp';   // 'vp' | 'tmp' | 'both'
-let occurrenceYes = null;
-let occMinuteVal  = null;
+let occurrenceYes = null;   // true=下次阻塞, false=下次正常, null=未選
 let originalFile  = '';
-let warnWindowSize = 30;    // 預設為 30，改為變數以支援自訂
+let sessionRecords = [];    // 所有已標記的 Session 總表
 
 // ── Display mode ───────────────────────────────────────────────
 function setMode(mode) {
@@ -585,17 +578,7 @@ function setMode(mode) {
     if (chart) generateChart();   // 已有圖表時立即重繪
 }
 
-// ── Window Size Update ─────────────────────────────────────────
-function updateWindowSize() {
-    let val = parseInt(document.getElementById('warnWindowInput').value);
-    if (!isNaN(val) && val > 0) {
-        warnWindowSize = val;
-        document.getElementById('headerWindowSize').textContent = val;
-        if (occMinuteVal !== null) {
-            updatePreview();
-        }
-    }
-}
+// ── Window Size Update (removed in V4.0) ───────────────────────
 
 // ── File upload ────────────────────────────────────────────────
 document.getElementById('csvFile').addEventListener('change', function(e) {
@@ -604,19 +587,15 @@ document.getElementById('csvFile').addEventListener('change', function(e) {
     originalFile = file.name.replace(/\.csv$/i, '');
 
     // Reset state
-    csvData = []; headers = []; occurrenceYes = null; occMinuteVal = null;
+    csvData = []; headers = []; occurrenceYes = null;
     if (chart) { chart.destroy(); chart = null; }
     document.getElementById('btnYes').className = 'toggle-btn';
     document.getElementById('btnNo').className  = 'toggle-btn';
-    document.getElementById('minuteSection').style.display  = 'none';
-    document.getElementById('warningPreview').style.display = 'none';
+    document.getElementById('sessionPreview').style.display = 'none';
     document.getElementById('applyBtn').disabled = true;
-    document.getElementById('occMinute').value = '';
     document.getElementById('chartContainer').style.display = 'none';
     document.getElementById('emptyState').style.display     = 'block';
     document.getElementById('dlArea').style.display         = 'none';
-    document.getElementById('sessionsList').innerHTML        = '';
-    document.getElementById('statusBar').textContent         = '';
 
     Papa.parse(file, {
         header: true,
@@ -749,26 +728,8 @@ function generateChart() {
             animation: { duration: 300 },
             interaction: { mode: 'index', intersect: false },
 
-            // 加入點擊互動事件（大幅修正：從實際資料抓取 minute）
-            onClick: (e, activeElements) => {
-                if (activeElements.length > 0) {
-                    const dataIndex = activeElements[0].index;
-
-                    // 從 csvData 中抓取真實的 'minute' 數值，而不是 X 軸的顯示字串
-                    const clickedRow = csvData[dataIndex];
-                    const clickedMinute = clickedRow['minute'] !== undefined ? clickedRow['minute'] : dataIndex;
-
-                    // 若還沒選擇「是，有阻塞」，自動幫使用者選擇
-                    if (!occurrenceYes) {
-                        setOccurrence(true);
-                    }
-
-                    // 自動填入點擊的分鐘數並更新預覽
-                    document.getElementById('occMinute').value = clickedMinute;
-                    updatePreview();
-                    showToast('📍 已選擇阻塞分鐘：' + clickedMinute, 'success');
-                }
-            },
+            // V4.0：點擊圖表不再填入分鐘數，僅做 hover 提示
+            onClick: (e, activeElements) => {},
 
             // 滑鼠移上去時顯示為手指（提示可點擊）
             onHover: (e, elements, chart) => {
@@ -784,10 +745,7 @@ function generateChart() {
                         afterBody: ctx => {
                             const row = csvData[ctx[0]?.dataIndex];
                             if (!row) return '';
-                            if (row['is_occ']) return '🔥 阻塞發生點！';
-                            if (row['label'] === 1) return '⚡ label = 1（預警窗口）';
-                            if (row['label'] === 0) return '✅ label = 0';
-                            return '';
+                            return `分鐘：${row['minute'] ?? '—'}`;
                         }
                     }
                 },
@@ -808,161 +766,132 @@ function generateChart() {
 
 function renderPointColors() {
     if (!chart) return;
-    chart.data.datasets.forEach((ds, i) => {
+    // V4.0：Session 級標記，圖表點顏色統一（不再標分鐘級紅色）
+    const sessionLabel = sessionRecords.find(r => {
+        const s = csvData[0] || {};
+        return r.key === `${s['daimark1']}_${s['date_str']}_S${s['session_index']}`;
+    });
+
+    chart.data.datasets.forEach((ds) => {
         const isVP = ds.label === 'VP';
-        // 修正點的顏色：橘色為阻塞點，紅色為預警，其餘正常
-        ds.pointBackgroundColor = csvData.map(row => {
-            if (row['is_occ']) return '#db6d28';
-            if (row['label'] === 1) return '#f85149';
-            return isVP ? '#58a6ff' : '#d29922';
-        });
-        // 修正點的大小：阻塞點最大
-        ds.pointRadius = csvData.map(row => {
-            if (row['is_occ']) return 6;
-            if (row['label'] === 1) return 4;
-            return 2;
-        });
+        const baseColor = isVP ? '#58a6ff' : '#d29922';
+        const markedColor = sessionLabel
+            ? (sessionLabel.next_label === 1 ? '#f85149' : '#3fb950')
+            : baseColor;
+
+        ds.pointBackgroundColor = csvData.map(() => markedColor);
+        ds.pointRadius = csvData.map(() => 2);
     });
     chart.update();
 }
 
 // ── Reset Chart Labels ─────────────────────────────────────────
 function resetChartLabels() {
-    if (!csvData.length) return;
-
-    // 清除所有資料的 label 欄位
-    csvData.forEach(row => {
-        row['label'] = undefined;
-        row['is_occ'] = false;
-    });
-
-    // 清除 UI 上的選擇狀態
     occurrenceYes = null;
-    occMinuteVal = null;
     document.getElementById('btnYes').className = 'toggle-btn';
     document.getElementById('btnNo').className  = 'toggle-btn';
-    document.getElementById('minuteSection').style.display = 'none';
-    document.getElementById('warningPreview').style.display = 'none';
-    document.getElementById('occMinute').value = '';
+    document.getElementById('sessionPreview').style.display = 'none';
     document.getElementById('applyBtn').disabled = true;
 
-    // 抓取當前檔案的日期與 Session 來組裝 Key
+    // 從清單中移除此 Session（若已加入）
     const sampleRow = csvData[0] || {};
     const sessionDate = sampleRow['date_str'] || '未知日期';
     const sessionId = sampleRow['session_index'] || '未知Session';
-    const uniqueKey = `${originalFile}_${sessionDate}_S${sessionId}`;
+    const patient = sampleRow['daimark1'] || '未知患者';
+    const uniqueKey = `${patient}_${sessionDate}_S${sessionId}`;
 
-    // 將此筆資料從「已標記清單」中暫時移除（如果存在的話）
     const existingIndex = sessionRecords.findIndex(r => r.key === uniqueKey);
     if (existingIndex >= 0) {
         sessionRecords.splice(existingIndex, 1);
         renderSessionList();
+        updateStatusBar();
     }
 
-    // 隱藏下載區塊
     document.getElementById('dlArea').style.display = 'none';
-
-    // 重新繪製圖表顏色並更新狀態列
     renderPointColors();
-    updateStatusBar();
-
-    showToast('🧹 已清除圖表上的所有標記，請重新選擇', 'success');
+    showToast('🧹 已清除此 Session 的標記', 'success');
 }
 
+// ── Labeling form ──────────────────────────────────────────────
 // ── Labeling form ──────────────────────────────────────────────
 function setOccurrence(yes) {
     occurrenceYes = yes;
     document.getElementById('btnYes').className = 'toggle-btn' + (yes  ? ' active-yes' : '');
     document.getElementById('btnNo').className  = 'toggle-btn' + (!yes ? ' active-no'  : '');
-    document.getElementById('minuteSection').style.display = yes ? 'block' : 'none';
-    if (!yes) {
-        document.getElementById('warningPreview').style.display = 'none';
-        document.getElementById('applyBtn').disabled = false;
-    } else {
-        document.getElementById('applyBtn').disabled = true;
-        updatePreview();
-    }
-}
 
-function updatePreview() {
-    const val = parseInt(document.getElementById('occMinute').value);
-    if (isNaN(val) || val < 0) {
-        document.getElementById('warningPreview').style.display = 'none';
-        document.getElementById('applyBtn').disabled = true;
-        return;
+    const preview = document.getElementById('sessionPreview');
+    const warningBox = document.getElementById('warningPreview');
+    const previewLabel = document.getElementById('previewLabel');
+    const previewText = document.getElementById('previewText');
+
+    preview.style.display = 'block';
+
+    const sampleRow = csvData[0] || {};
+    const sessionDate = sampleRow['date_str'] || '未知日期';
+    const sessionId = sampleRow['session_index'] || '?';
+
+    if (yes) {
+        warningBox.style.background = 'var(--red-dim)';
+        warningBox.style.borderColor = 'rgba(248,81,73,0.3)';
+        previewLabel.style.color = 'var(--red)';
+        previewLabel.textContent = '🚨 標記：下一次透析 → 阻塞（label = 1）';
+        previewText.innerHTML = `患者：<strong>${sampleRow['daimark1'] || '—'}</strong>　Session ${sessionId}　${sessionDate}<br>此筆 Session 的 next_label 將設為 <strong style="color:var(--red)">1</strong>`;
+    } else {
+        warningBox.style.background = 'rgba(63,185,80,0.07)';
+        warningBox.style.borderColor = 'rgba(63,185,80,0.25)';
+        previewLabel.style.color = 'var(--green)';
+        previewLabel.textContent = '✅ 標記：下一次透析 → 正常（label = 0）';
+        previewText.innerHTML = `患者：<strong>${sampleRow['daimark1'] || '—'}</strong>　Session ${sessionId}　${sessionDate}<br>此筆 Session 的 next_label 將設為 <strong style="color:var(--green)">0</strong>`;
     }
-    occMinuteVal = val;
-    const wStart = Math.max(0, val - warnWindowSize);
-    const wEnd   = val - 1;
-    document.getElementById('warningPreview').style.display = 'block';
-    document.getElementById('previewText').innerHTML =
-        `阻塞分鐘：<strong style="color:var(--orange)">${val}</strong><br>` +
-        `label = 1 範圍：第 <strong style="color:var(--red)">${wStart}</strong> 分鐘 ～ 第 <strong style="color:var(--red)">${wEnd}</strong> 分鐘<br>` +
-        `（共 ${wEnd - wStart + 1} 分鐘標為預警）`;
+
     document.getElementById('applyBtn').disabled = false;
 }
 
+// updatePreview 在 V4.0 已整合到 setOccurrence，保留空函數避免錯誤
+function updatePreview() {}
+
 function applyLabel() {
-    if (occurrenceYes === null) { showToast('請先選擇是否有阻塞', 'error'); return; }
+    if (occurrenceYes === null) { showToast('請先選擇下次是否阻塞', 'error'); return; }
 
-    if (!occurrenceYes) {
-        // 無阻塞：全部 label = 0
-        csvData.forEach(row => { row['label'] = 0; row['is_occ'] = false; });
-        addToSessionList(false, null);
-    } else {
-        if (occMinuteVal === null || isNaN(occMinuteVal)) { showToast('請輸入阻塞分鐘數', 'error'); return; }
-        const occ = occMinuteVal;
-        const wStart = Math.max(0, occ - warnWindowSize);
-        csvData.forEach((row, index) => {
-            // 大幅修正：強制固定使用 minute 欄位比對，不再受到 X 軸格式影響
-            const m = row['minute'] !== undefined ? +row['minute'] : index;
-
-            if (!isNaN(m) && m >= wStart && m < occ) {
-                row['label'] = 1;
-            } else {
-                row['label'] = 0;
-            }
-
-            // 單獨標記真正的發生點
-            row['is_occ'] = (!isNaN(m) && m === occ);
-        });
-        addToSessionList(true, occ);
-    }
+    const nextLabel = occurrenceYes ? 1 : 0;
+    addToSessionList(occurrenceYes);
 
     renderPointColors();
     document.getElementById('dlArea').style.display = 'block';
     updateStatusBar();
-    showToast('✅ Label 已套用', 'success');
+    showToast(occurrenceYes ? '🚨 已標記：下次阻塞（label=1）' : '✅ 已標記：下次正常（label=0）', 'success');
 }
 
 // ── Sessions list ──────────────────────────────────────────────
-let sessionRecords = [];
-
-function addToSessionList(hasOcc, occMin) {
+function addToSessionList(hasOcc) {
     const sampleRow = csvData[0] || {};
-    // 抓取日期與 session
     const sessionDate = sampleRow['date_str'] || '未知日期';
     const sessionId = sampleRow['session_index'] || '未知Session';
+    const patient = sampleRow['daimark1'] || '未知患者';
+    const daiid = sampleRow['daiid'] || '—';
 
-    // 建立獨一無二的 Key：檔名 + 日期 + Session
-    const uniqueKey = `${originalFile}_${sessionDate}_S${sessionId}`;
+    const uniqueKey = `${patient}_${sessionDate}_S${sessionId}`;
 
     const record = {
         id:      Date.now(),
         key:     uniqueKey,
-        name:    originalFile,
+        patient: patient,
+        daiid:   daiid,
         date:    sessionDate,
         session: sessionId,
-        hasOcc:  hasOcc,
-        occMin:  occMin
+        next_label: hasOcc ? 1 : 0,
+        filename: originalFile
     };
 
-    // 改用 key 來尋找清單中是否已經有這筆紀錄
     const existing = sessionRecords.findIndex(r => r.key === uniqueKey);
     if (existing >= 0) sessionRecords[existing] = record;
     else sessionRecords.push(record);
 
     renderSessionList();
+    updateStatusBar();
+
+    // 更新匯出按鈕
+    document.getElementById('exportMasterBtn').disabled = sessionRecords.length === 0;
 }
 
 function renderSessionList() {
@@ -974,59 +903,55 @@ function renderSessionList() {
     list.innerHTML = sessionRecords.map(r => `
         <div class="session-item">
             <div>
-                <div class="si-name" title="${r.name}">${r.name.slice(-15)}</div>
+                <div class="si-name" title="${r.patient}">${r.patient}</div>
                 <div style="font-size:0.75em; color:var(--accent); font-family:var(--mono); margin-top:2px;">
                     📅 ${r.date} | S${r.session}
                 </div>
                 <div style="font-size:0.75em; color:var(--text2); margin-top:2px">
-                    ${r.hasOcc ? `阻塞 @${r.occMin} min` : '正常透析'}
+                    next_label = ${r.next_label}
                 </div>
             </div>
-            <span class="si-badge ${r.hasOcc ? 'badge-occ' : 'badge-norm'}">
-                ${r.hasOcc ? '阻塞' : '正常'}
+            <span class="si-badge ${r.next_label === 1 ? 'badge-occ' : 'badge-norm'}">
+                ${r.next_label === 1 ? '下次阻塞' : '下次正常'}
             </span>
         </div>
     `).join('');
 }
 
 function updateStatusBar() {
-    const n1 = csvData.filter(r => r['label'] === 1).length;
-    const n0 = csvData.filter(r => r['label'] === 0).length;
+    const n1 = sessionRecords.filter(r => r.next_label === 1).length;
+    const n0 = sessionRecords.filter(r => r.next_label === 0).length;
+    const total = n1 + n0;
 
-    if (n1 === 0 && n0 === 0) {
-        document.getElementById('statusBar').textContent = '尚未進行任何標記';
+    if (total === 0) {
+        document.getElementById('statusBar').textContent = '尚未標記任何 Session';
         return;
     }
-
     document.getElementById('statusBar').textContent =
-        `label=1: ${n1} 筆　label=0: ${n0} 筆　比率: ${(n1/(n1+n0)*100).toFixed(1)}%`;
+        `已標記 ${total} 筆　下次阻塞: ${n1}　下次正常: ${n0}　阻塞率: ${(n1/total*100).toFixed(1)}%`;
 }
 
-// ── Download ───────────────────────────────────────────────────
-function downloadCSV() {
-    if (!csvData.length) { showToast('沒有資料可下載', 'error'); return; }
+// ── Download Master CSV ────────────────────────────────────────
+function downloadMasterCSV() {
+    if (sessionRecords.length === 0) { showToast('尚無標記資料可匯出', 'error'); return; }
 
-    // 抓取日期與 Session
-    const sampleRow = csvData[0] || {};
-    const sessionDate = sampleRow['date_str'] || '未知日期';
-    const sessionId = sampleRow['session_index'] || '未知Session';
-
-    // 匯出時把標記專用的 is_occ 拿掉，保持 CSV 乾淨
-    const exportData = csvData.map(row => {
-        const copy = { ...row };
-        delete copy.is_occ;
-        return copy;
-    });
+    // 總表欄位：patient, daiid, date, session_index, next_label
+    const exportData = sessionRecords.map(r => ({
+        daimark1:      r.patient,
+        daiid:         r.daiid,
+        date_str:      r.date,
+        session_index: r.session,
+        next_label:    r.next_label
+    }));
 
     const csv  = Papa.unparse(exportData);
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href     = URL.createObjectURL(blob);
-
-    // 檔名加上日期與 Session
-    link.download = `${originalFile}_${sessionDate}_S${sessionId}-labeled.csv`;
+    const now = new Date().toISOString().slice(0,10);
+    link.download = `session_labels_master_${now}.csv`;
     link.click();
-    showToast('📊 CSV 已下載', 'success');
+    showToast(`📋 已匯出 ${exportData.length} 筆 Session 標記總表`, 'success');
 }
 
 function downloadImage() {
